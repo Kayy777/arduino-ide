@@ -334,6 +334,7 @@ export interface BoardDetails {
   readonly VID: string;
   readonly PID: string;
   readonly buildProperties: string[];
+  readonly defaultProgrammerId: string | undefined;
 }
 
 export interface Tool {
@@ -406,7 +407,6 @@ export interface Programmer {
   readonly name: string;
   readonly platform: string;
   readonly id: string;
-  readonly default?: boolean;
 }
 export namespace Programmer {
   export function equals(
@@ -435,9 +435,7 @@ export function isProgrammer(arg: unknown): arg is Programmer {
     (<Programmer>arg).name !== undefined &&
     typeof (<Programmer>arg).name === 'string' &&
     (<Programmer>arg).platform !== undefined &&
-    typeof (<Programmer>arg).platform === 'string' &&
-    ((<Programmer>arg).default === undefined ||
-      typeof (<Programmer>arg).default === 'boolean')
+    typeof (<Programmer>arg).platform === 'string'
   );
 }
 

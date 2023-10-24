@@ -146,6 +146,7 @@ export class BoardsServiceImpl
           platform: p.getPlatform(),
         }
     );
+    const defaultProgrammerId = detailsResp.getDefaultProgrammerId();
 
     let VID = 'N/A';
     let PID = 'N/A';
@@ -168,6 +169,9 @@ export class BoardsServiceImpl
       VID,
       PID,
       buildProperties,
+      defaultProgrammerId: defaultProgrammerId
+        ? defaultProgrammerId
+        : undefined,
     };
   }
 

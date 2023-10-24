@@ -84,6 +84,8 @@ export class BoardDetailsResponse extends jspb.Message {
     getBuildPropertiesList(): Array<string>;
     setBuildPropertiesList(value: Array<string>): BoardDetailsResponse;
     addBuildProperties(value: string, index?: number): string;
+    getDefaultProgrammerId(): string;
+    setDefaultProgrammerId(value: string): BoardDetailsResponse;
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): BoardDetailsResponse.AsObject;
@@ -112,6 +114,7 @@ export namespace BoardDetailsResponse {
         debuggingSupported: boolean,
         identificationPropertiesList: Array<BoardIdentificationProperties.AsObject>,
         buildPropertiesList: Array<string>,
+        defaultProgrammerId: string,
     }
 }
 
@@ -488,8 +491,6 @@ export class BoardListWatchRequest extends jspb.Message {
     clearInstance(): void;
     getInstance(): cc_arduino_cli_commands_v1_common_pb.Instance | undefined;
     setInstance(value?: cc_arduino_cli_commands_v1_common_pb.Instance): BoardListWatchRequest;
-    getInterrupt(): boolean;
-    setInterrupt(value: boolean): BoardListWatchRequest;
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): BoardListWatchRequest.AsObject;
@@ -504,7 +505,6 @@ export class BoardListWatchRequest extends jspb.Message {
 export namespace BoardListWatchRequest {
     export type AsObject = {
         instance?: cc_arduino_cli_commands_v1_common_pb.Instance.AsObject,
-        interrupt: boolean,
     }
 }
 

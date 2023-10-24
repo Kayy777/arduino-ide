@@ -5,7 +5,11 @@ import {
   Programmer,
   isBoardIdentifierChangeEvent,
 } from '../../common/protocol';
-import { BoardsDataStore, isEmptyData } from '../boards/boards-data-store';
+import {
+  BoardsDataStore,
+  findDefaultProgrammer,
+  isEmptyData,
+} from '../boards/boards-data-store';
 import { BoardsServiceProvider } from '../boards/boards-service-provider';
 import { Contribution } from './contribution';
 
@@ -75,7 +79,7 @@ export async function ensureProgrammerIsSelected(
     );
     return true;
   }
-  let programmer = data.programmers.find((p) => p.default);
+  let programmer = findDefaultProgrammer(data.programmers, data);
   if (programmer) {
     // select the programmer if the default info is available
     const result = await selectProgrammer({
@@ -97,7 +101,7 @@ export async function ensureProgrammerIsSelected(
     console.debug(`Skipping. ${fqbn} does not have programmers.`);
     return false;
   }
-  programmer = reloadedData.programmers.find((p) => p.default);
+  programmer = findDefaultProgrammer(reloadedData.programmers, reloadedData);
   if (!programmer) {
     console.debug(
       `Skipping. Could not find a default programmer for ${fqbn}. Programmers were: `

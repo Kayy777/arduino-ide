@@ -99,10 +99,16 @@ export class BoardsDataStore implements FrontendApplicationContribution {
       return BoardsDataStore.Data.EMPTY;
     }
 
+    const { programmers, defaultProgrammerId, configOptions } = boardDetails;
+    const selectedProgrammer = findDefaultProgrammer(
+      programmers,
+      defaultProgrammerId
+    );
     data = {
-      configOptions: boardDetails.configOptions,
-      programmers: boardDetails.programmers,
-      selectedProgrammer: boardDetails.programmers.find((p) => p.default),
+      configOptions,
+      programmers,
+      selectedProgrammer,
+      defaultProgrammerId,
     };
     await this.storageService.setData(key, data);
     return data;
@@ -210,11 +216,13 @@ export namespace BoardsDataStore {
     readonly configOptions: ConfigOption[];
     readonly programmers: Programmer[];
     readonly selectedProgrammer?: Programmer;
+    readonly defaultProgrammerId: string | undefined;
   }
   export namespace Data {
     export const EMPTY: Data = {
       configOptions: [],
       programmers: [],
+      defaultProgrammerId: undefined,
     };
     export function is(arg: unknown): arg is Data {
       return (
@@ -235,4 +243,18 @@ export function isEmptyData(data: BoardsDataStore.Data): boolean {
     Boolean(!data.programmers.length) &&
     Boolean(!data.selectedProgrammer)
   );
+}
+
+export function findDefaultProgrammer(
+  programmers: readonly Programmer[],
+  defaultProgrammerId: string | undefined | BoardsDataStore.Data
+): Programmer | undefined {
+  if (!defaultProgrammerId) {
+    return undefined;
+  }
+  const id =
+    typeof defaultProgrammerId === 'string'
+      ? defaultProgrammerId
+      : defaultProgrammerId.defaultProgrammerId;
+  return programmers.find((p) => p.id === id);
 }

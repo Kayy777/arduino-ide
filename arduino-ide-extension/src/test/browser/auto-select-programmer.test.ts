@@ -24,7 +24,6 @@ describe('auto-select-programmer', () => {
       id: 'p1',
       name: 'P1',
       platform: 'a:b',
-      default: true,
     };
     const anotherProgrammer: Programmer = {
       id: 'p2',
@@ -74,6 +73,7 @@ describe('auto-select-programmer', () => {
           configOptions: [],
           programmers: [programmer],
           selectedProgrammer: programmer,
+          defaultProgrammerId: undefined,
         }),
         loadBoardDetails: () => undefined,
         selectProgrammer: () => false,
@@ -93,6 +93,7 @@ describe('auto-select-programmer', () => {
           configOptions: [],
           programmers: [anotherProgrammer, programmer],
           selectedProgrammer: undefined,
+          defaultProgrammerId: programmer.id,
         }),
         loadBoardDetails: () => undefined,
         selectProgrammer: (arg) => {
@@ -117,6 +118,7 @@ describe('auto-select-programmer', () => {
           configOptions: [],
           programmers: [],
           selectedProgrammer: undefined,
+          defaultProgrammerId: undefined,
         }),
         loadBoardDetails: () => undefined,
         selectProgrammer: () => false,
@@ -142,6 +144,7 @@ describe('auto-select-programmer', () => {
           ],
           programmers: [],
           selectedProgrammer: undefined,
+          defaultProgrammerId: undefined,
         }),
         loadBoardDetails: () => ({
           fqbn,
@@ -152,6 +155,7 @@ describe('auto-select-programmer', () => {
           VID: 'VID',
           PID: 'PID',
           buildProperties: [],
+          defaultProgrammerId: programmer.id,
         }),
         selectProgrammer: (arg) => {
           selectedProgrammers[arg.fqbn] = arg.selectedProgrammer;
