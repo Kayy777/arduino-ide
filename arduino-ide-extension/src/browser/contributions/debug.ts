@@ -2,7 +2,6 @@ import { Emitter, Event } from '@theia/core/lib/common/event';
 import { MenuModelRegistry } from '@theia/core/lib/common/menu/menu-model-registry';
 import { nls } from '@theia/core/lib/common/nls';
 import { inject, injectable } from '@theia/core/shared/inversify';
-import { HostedPluginSupport } from '@theia/plugin-ext/lib/hosted/browser/hosted-plugin';
 import {
   SelectManually,
   noBoardSelected,
@@ -21,6 +20,7 @@ import {
 } from '../../common/protocol';
 import { BoardsDataStore } from '../boards/boards-data-store';
 import { BoardsServiceProvider } from '../boards/boards-service-provider';
+import { HostedPluginSupport } from '../hosted/hosted-plugin-support';
 import { ArduinoMenus } from '../menu/arduino-menus';
 import { NotificationCenter } from '../notification-center';
 import { CurrentSketch } from '../sketches-service-client-impl';
@@ -135,10 +135,10 @@ export class Debug extends SketchContribution {
     });
     this.notificationCenter.onPlatformDidInstall(() => this.refreshState());
     this.notificationCenter.onPlatformDidUninstall(() => this.refreshState());
-    this.boardsDataStore.onChanged((fqbns) => {
+    this.boardsDataStore.onDidChange((event) => {
       const selectedFqbn =
         this.boardsServiceProvider.boardsConfig.selectedBoard?.fqbn;
-      if (selectedFqbn && fqbns.includes(selectedFqbn)) {
+      if (event.changes.find((change) => change.fqbn === selectedFqbn)) {
         this.refreshState();
       }
     });
