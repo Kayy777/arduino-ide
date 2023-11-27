@@ -1,11 +1,25 @@
+import { enableJSDOM } from '@theia/core/lib/browser/test/jsdom';
+const disableJSDOM = enableJSDOM();
+
+import { FrontendApplicationConfigProvider } from '@theia/core/lib/browser/frontend-application-config-provider';
+FrontendApplicationConfigProvider.set({});
+
 import { deepClone } from '@theia/core/lib/common/objects';
 import { Mutable } from '@theia/core/lib/common/types';
-import { rejects } from 'assert/strict';
 import { expect } from 'chai';
+import { doesNotReject, rejects } from 'node:assert/strict';
 import { BoardsDataStore } from '../../browser/boards/boards-data-store';
-import { isDebugEnabled } from '../../browser/contributions/debug';
-import { noSketchOpened } from '../../common/nls';
+import {
+  debuggingNotSupported,
+  isDebugEnabled,
+  noPlatformInstalledFor,
+  noProgrammerSelectedFor,
+  sketchIsNotCompiled,
+} from '../../browser/contributions/debug';
+import { noBoardSelected, noSketchOpened } from '../../common/nls';
 import type { BoardDetails, Programmer, Sketch } from '../../common/protocol';
+
+disableJSDOM();
 
 describe('debug', () => {
   describe('isDebugEnabled', () => {
@@ -44,11 +58,11 @@ describe('debug', () => {
         isDebugEnabled(
           undefined,
           board,
-          fail(),
-          fail(),
-          fail(),
-          fail(),
-          fail()
+          unexpectedCall(),
+          unexpectedCall(),
+          unexpectedCall(),
+          unexpectedCall(),
+          unexpectedCall()
         ),
         (reason) => reason instanceof Error && reason.message === noSketchOpened
       );
@@ -59,11 +73,11 @@ describe('debug', () => {
         isDebugEnabled(
           'invalid',
           board,
-          fail(),
-          fail(),
-          fail(),
-          fail(),
-          fail()
+          unexpectedCall(),
+          unexpectedCall(),
+          unexpectedCall(),
+          unexpectedCall(),
+          unexpectedCall()
         ),
         (reason) => reason instanceof Error && reason.message === noSketchOpened
       );
@@ -74,13 +88,14 @@ describe('debug', () => {
         isDebugEnabled(
           sketch,
           undefined,
-          fail(),
-          fail(),
-          fail(),
-          fail(),
-          fail()
+          unexpectedCall(),
+          unexpectedCall(),
+          unexpectedCall(),
+          unexpectedCall(),
+          unexpectedCall()
         ),
-        (reason) => reason instanceof Error && reason.message === noSketchOpened
+        (reason) =>
+          reason instanceof Error && reason.message === noBoardSelected
       );
     });
 
@@ -89,13 +104,15 @@ describe('debug', () => {
         isDebugEnabled(
           sketch,
           { name, fqbn: undefined },
-          fail(),
-          fail(),
-          fail(),
-          fail(),
-          fail()
+          unexpectedCall(),
+          unexpectedCall(),
+          unexpectedCall(),
+          unexpectedCall(),
+          unexpectedCall()
         ),
-        (reason) => reason instanceof Error && reason.message === noSketchOpened
+        (reason) =>
+          reason instanceof Error &&
+          reason.message === noPlatformInstalledFor(board.name)
       );
     });
 
@@ -107,10 +124,12 @@ describe('debug', () => {
           () => undefined,
           () => data,
           (fqbn) => fqbn,
-          fail(),
-          fail()
+          unexpectedCall(),
+          unexpectedCall()
         ),
-        (reason) => reason instanceof Error && reason.message === noSketchOpened
+        (reason) =>
+          reason instanceof Error &&
+          reason.message === noPlatformInstalledFor(board.name)
       );
     });
 
@@ -124,10 +143,12 @@ describe('debug', () => {
           () => boardDetails,
           () => copyData,
           (fqbn) => fqbn,
-          fail(),
-          fail()
+          unexpectedCall(),
+          unexpectedCall()
         ),
-        (reason) => reason instanceof Error && reason.message === noSketchOpened
+        (reason) =>
+          reason instanceof Error &&
+          reason.message === noProgrammerSelectedFor(board.name)
       );
     });
 
@@ -150,11 +171,13 @@ describe('debug', () => {
             'myCode' in reason &&
             reason['myCode'] === 'x'
         ),
-        (reason) => reason instanceof Error && reason.message === noSketchOpened
+        (reason) =>
+          reason instanceof Error &&
+          reason.message === sketchIsNotCompiled(sketch.name)
       );
     });
 
-    it('should error when it fails to get debug info from the CLI', async () => {
+    it('should error when it fails to get the debug info from the CLI', async () => {
       await rejects(
         isDebugEnabled(
           sketch,
@@ -163,14 +186,32 @@ describe('debug', () => {
           () => data,
           (fqbn) => fqbn,
           () => {
-            throw new Error();
+            throw new Error('unhandled error');
           },
           () => false
         ),
-        (reason) => reason instanceof Error && reason.message === noSketchOpened
+        (reason) =>
+          reason instanceof Error &&
+          reason.message === debuggingNotSupported(board.name)
       );
     });
 
-    const fail = () => expect.fail('unexpected call');
+    it('should resolve when debugging is supported', async () => {
+      await doesNotReject(
+        isDebugEnabled(
+          sketch,
+          board,
+          () => boardDetails,
+          () => data,
+          (fqbn) => fqbn,
+          () => Promise.resolve(),
+          unexpectedCall()
+        )
+      );
+    });
+
+    function unexpectedCall(): () => never {
+      return () => expect.fail('unexpected call');
+    }
   });
 });
