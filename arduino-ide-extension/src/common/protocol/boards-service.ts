@@ -80,6 +80,17 @@ export interface BoardsService
     fqbn: string;
     protocol: string;
   }): Promise<BoardUserField[]>;
+  /**
+   * Checks whether the debugging is enabled with the FQBN, programmer, current sketch, and custom board options.
+   * Rejects when the debugging is unsupported.
+   */
+  checkDebugEnabled(params: CheckDebugEnabledParams): Promise<void>;
+}
+
+export interface CheckDebugEnabledParams {
+  readonly fqbn: string;
+  readonly programmer: string;
+  readonly sketchUri: string;
 }
 
 export interface BoardSearch extends Searchable.Options {
@@ -330,7 +341,6 @@ export interface BoardDetails {
   readonly requiredTools: Tool[];
   readonly configOptions: ConfigOption[];
   readonly programmers: Programmer[];
-  readonly debuggingSupported: boolean;
   readonly VID: string;
   readonly PID: string;
   readonly buildProperties: string[];

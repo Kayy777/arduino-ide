@@ -3,14 +3,20 @@ import { MenuModelRegistry } from '@theia/core/lib/common/menu/menu-model-regist
 import { nls } from '@theia/core/lib/common/nls';
 import { inject, injectable } from '@theia/core/shared/inversify';
 import { HostedPluginSupport } from '@theia/plugin-ext/lib/hosted/browser/hosted-plugin';
-import { SelectManually } from '../../common/nls';
 import {
-  Board,
+  SelectManually,
+  noBoardSelected,
+  noSketchOpened,
+} from '../../common/nls';
+import {
+  BoardDetails,
   BoardIdentifier,
   BoardsService,
+  CheckDebugEnabledParams,
   ExecutableService,
   SketchRef,
   isBoardIdentifierChangeEvent,
+  isCompileSummary,
   isProgrammer,
 } from '../../common/protocol';
 import { BoardsDataStore } from '../boards/boards-data-store';
@@ -80,10 +86,7 @@ export class Debug extends SketchContribution {
   /**
    * If `undefined`, debugging is enabled. Otherwise, the reason why it's disabled.
    */
-  private _disabledMessages?: string = nls.localize(
-    'arduino/common/noBoardSelected',
-    'No board selected'
-  ); // Initial pessimism.
+  private _disabledMessages?: string = noBoardSelected; // Initial pessimism.
   private disabledMessageDidChangeEmitter = new Emitter<string | undefined>();
   private onDisabledMessageDidChange =
     this.disabledMessageDidChangeEmitter.event;
@@ -127,11 +130,27 @@ export class Debug extends SketchContribution {
     );
     this.boardsServiceProvider.onBoardsConfigDidChange((event) => {
       if (isBoardIdentifierChangeEvent(event)) {
-        this.refreshState(event.selectedBoard);
+        this.refreshState();
       }
     });
     this.notificationCenter.onPlatformDidInstall(() => this.refreshState());
     this.notificationCenter.onPlatformDidUninstall(() => this.refreshState());
+    this.boardsDataStore.onChanged((fqbns) => {
+      const selectedFqbn =
+        this.boardsServiceProvider.boardsConfig.selectedBoard?.fqbn;
+      if (selectedFqbn && fqbns.includes(selectedFqbn)) {
+        this.refreshState();
+      }
+    });
+    this.commandService.onDidExecuteCommand((event) => {
+      const { commandId, args } = event;
+      if (
+        commandId === 'arduino.languageserver.notifyBuildDidComplete' &&
+        isCompileSummary(args[0])
+      ) {
+        this.refreshState();
+      }
+    });
   }
 
   override onReady(): void {
@@ -166,44 +185,25 @@ export class Debug extends SketchContribution {
     });
   }
 
-  private async refreshState(
-    board: Board | undefined = this.boardsServiceProvider.boardsConfig
-      .selectedBoard
-  ): Promise<void> {
-    if (!board) {
-      this.disabledMessage = nls.localize(
-        'arduino/common/noBoardSelected',
-        'No board selected'
+  private async refreshState(): Promise<void> {
+    try {
+      const sketch = this.sketchServiceClient.tryGetCurrentSketch();
+      const board = this.boardsServiceProvider.boardsConfig.selectedBoard;
+      await isDebugEnabled(
+        sketch,
+        board,
+        (fqbn) => this.boardService.getBoardDetails({ fqbn }),
+        (fqbn) => this.boardsDataStore.getData(fqbn),
+        (fqbn) => this.boardsDataStore.appendConfigToFqbn(fqbn),
+        (params) => this.boardService.checkDebugEnabled(params),
+        (reason, sketch) => this.isSketchNotVerifiedError(reason, sketch)
       );
-      return;
-    }
-    const fqbn = board.fqbn;
-    if (!fqbn) {
-      this.disabledMessage = nls.localize(
-        'arduino/debug/noPlatformInstalledFor',
-        "Platform is not installed for '{0}'",
-        board.name
-      );
-      return;
-    }
-    const details = await this.boardService.getBoardDetails({ fqbn });
-    if (!details) {
-      this.disabledMessage = nls.localize(
-        'arduino/debug/noPlatformInstalledFor',
-        "Platform is not installed for '{0}'",
-        board.name
-      );
-      return;
-    }
-    const { debuggingSupported } = details;
-    if (!debuggingSupported) {
-      this.disabledMessage = nls.localize(
-        'arduino/debug/debuggingNotSupported',
-        "Debugging is not supported by '{0}'",
-        board.name
-      );
-    } else {
       this.disabledMessage = undefined;
+    } catch (err) {
+      this.disabledMessage = String(err);
+      if (err instanceof Error) {
+        this.disabledMessage = err.message;
+      }
     }
   }
 
@@ -244,7 +244,7 @@ export class Debug extends SketchContribution {
         const answer = await this.messageService.error(
           nls.localize(
             'arduino/debug/sketchIsNotCompiled',
-            "Sketch '{0}' must be verified before starting a debug session. Please verify the sketch and start debugging again. Do you want to verify the sketch now?",
+            "Sketch '{0}' must be verified before starting a debug session.",
             sketch.name
           ),
           yes
@@ -356,4 +356,102 @@ export namespace Debug {
       id: 'arduino-is-optimize-for-debug',
     };
   }
+}
+
+/**
+ * (non-API)
+ */
+export async function isDebugEnabled(
+  sketch: CurrentSketch | undefined,
+  board: BoardIdentifier | undefined,
+  getDetails: (fqbn: string) => Promise<BoardDetails | undefined>,
+  getData: (fqbn: string) => Promise<BoardsDataStore.Data>,
+  appendConfigToFqbn: (fqbn: string) => Promise<string | undefined>,
+  checkDebugEnabled: (params: CheckDebugEnabledParams) => Promise<void>,
+  isSketchNotVerifiedError: (
+    err: unknown,
+    sketchRef: SketchRef
+  ) => Promise<boolean>
+): Promise<void> {
+  if (!CurrentSketch.isValid(sketch)) {
+    throw new Error(noSketchOpened);
+  }
+  if (!board) {
+    throw new Error(noBoardSelected);
+  }
+  const { fqbn } = board;
+  if (!fqbn) {
+    throw new Error(noPlatformInstalledFor(board.name));
+  }
+  const [details, data, fqbnWithConfig] = await Promise.all([
+    getDetails(fqbn),
+    getData(fqbn),
+    appendConfigToFqbn(fqbn),
+  ]);
+  if (!details) {
+    throw new Error(noPlatformInstalledFor(board.name));
+  }
+  if (!fqbnWithConfig) {
+    throw new Error(
+      `Failed to append boards config to the FQBN. Original FQBN was: ${fqbn}`
+    );
+  }
+  if (!data.selectedProgrammer) {
+    throw new Error(noProgrammerSelectedFor(board.name));
+  }
+  const params = {
+    fqbn: fqbnWithConfig,
+    programmer: data.selectedProgrammer.id,
+    sketchUri: sketch.uri,
+  };
+  try {
+    await checkDebugEnabled(params);
+  } catch (err) {
+    const sketchNotVerified = await isSketchNotVerifiedError(err, sketch);
+    if (sketchNotVerified) {
+      throw new Error(sketchIsNotCompiled(sketch.name));
+    }
+    throw new Error(debuggingNotSupported(board.name));
+  }
+}
+
+/**
+ * (non-API)
+ */
+export function sketchIsNotCompiled(sketchName: string): string {
+  return nls.localize(
+    'arduino/debug/sketchIsNotCompiled',
+    "Sketch '{0}' must be verified before starting a debug session",
+    sketchName
+  );
+}
+/**
+ * (non-API)
+ */
+export function noPlatformInstalledFor(boardName: string): string {
+  return nls.localize(
+    'arduino/debug/noPlatformInstalledFor',
+    "Platform is not installed for '{0}'",
+    boardName
+  );
+}
+/**
+ * (non-API)
+ */
+export function debuggingNotSupported(boardName: string): string {
+  return nls.localize(
+    'arduino/debug/debuggingNotSupported',
+    "Debugging is not supported by '{0}'",
+    boardName
+  );
+}
+/**
+ * (non-API)
+ */
+export function noProgrammerSelectedFor(boardName: string): string {
+  return nls.localize(
+    'arduino/debug/noProgrammerSelectedFor',
+    "No programmer selected for '{0}'",
+    boardName
+  );
 }

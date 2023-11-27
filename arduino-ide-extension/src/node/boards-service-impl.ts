@@ -1,27 +1,39 @@
-import { injectable, inject } from '@theia/core/shared/inversify';
 import { ILogger } from '@theia/core/lib/common/logger';
+import { nls } from '@theia/core/lib/common/nls';
 import { notEmpty } from '@theia/core/lib/common/objects';
+import { FileUri } from '@theia/core/lib/node/file-uri';
+import { inject, injectable } from '@theia/core/shared/inversify';
 import {
-  BoardsService,
-  Installable,
-  BoardsPackage,
   Board,
   BoardDetails,
+  BoardSearch,
+  BoardUserField,
+  BoardWithPackage,
+  BoardsPackage,
+  BoardsService,
   ConfigOption,
   ConfigValue,
+  CheckDebugEnabledParams,
+  DetectedPorts,
+  Installable,
+  NotificationServiceServer,
   Programmer,
   ResponseService,
-  NotificationServiceServer,
-  DetectedPorts,
-  BoardWithPackage,
-  BoardUserField,
-  BoardSearch,
-  sortComponents,
   SortGroup,
-  platformInstallFailed,
   createPlatformIdentifier,
   platformIdentifierEquals,
+  platformInstallFailed,
+  sortComponents,
 } from '../common/protocol';
+import { BoardDiscovery } from './board-discovery';
+import {
+  BoardDetailsRequest,
+  BoardDetailsResponse,
+  BoardListAllRequest,
+  BoardListAllResponse,
+  BoardSearchRequest,
+} from './cli-protocol/cc/arduino/cli/commands/v1/board_pb';
+import { Platform } from './cli-protocol/cc/arduino/cli/commands/v1/common_pb';
 import {
   PlatformInstallRequest,
   PlatformListRequest,
@@ -30,25 +42,16 @@ import {
   PlatformSearchResponse,
   PlatformUninstallRequest,
 } from './cli-protocol/cc/arduino/cli/commands/v1/core_pb';
-import { Platform } from './cli-protocol/cc/arduino/cli/commands/v1/common_pb';
-import { BoardDiscovery } from './board-discovery';
-import { CoreClientAware } from './core-client-provider';
-import {
-  BoardDetailsRequest,
-  BoardDetailsResponse,
-  BoardListAllRequest,
-  BoardListAllResponse,
-  BoardSearchRequest,
-} from './cli-protocol/cc/arduino/cli/commands/v1/board_pb';
+import { GetDebugConfigRequest } from './cli-protocol/cc/arduino/cli/commands/v1/debug_pb';
 import {
   ListProgrammersAvailableForUploadRequest,
   ListProgrammersAvailableForUploadResponse,
   SupportedUserFieldsRequest,
   SupportedUserFieldsResponse,
 } from './cli-protocol/cc/arduino/cli/commands/v1/upload_pb';
+import { CoreClientAware } from './core-client-provider';
 import { ExecuteWithProgress } from './grpc-progressible';
 import { ServiceError } from './service-error';
-import { nls } from '@theia/core/lib/common';
 
 @injectable()
 export class BoardsServiceImpl
@@ -98,8 +101,6 @@ export class BoardsServiceImpl
     if (!detailsResp) {
       return undefined;
     }
-
-    const debuggingSupported = detailsResp.getDebuggingSupported();
 
     const requiredTools = detailsResp.getToolsDependenciesList().map((t) => ({
       name: t.getName(),
@@ -165,7 +166,6 @@ export class BoardsServiceImpl
       requiredTools,
       configOptions,
       programmers,
-      debuggingSupported,
       VID,
       PID,
       buildProperties,
@@ -173,6 +173,34 @@ export class BoardsServiceImpl
         ? defaultProgrammerId
         : undefined,
     };
+  }
+
+  async checkDebugEnabled(params: CheckDebugEnabledParams): Promise<void> {
+    const { fqbn, programmer, sketchUri } = params;
+    const sketchPath = FileUri.fsPath(sketchUri);
+    const { client, instance } = await this.coreClient;
+    const req = new GetDebugConfigRequest()
+      .setInstance(instance)
+      .setFqbn(fqbn)
+      .setProgrammer(programmer)
+      .setSketchPath(sketchPath);
+    try {
+      await new Promise<void>((resolve, reject) =>
+        client.getDebugConfig(req, (err) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve();
+          }
+        })
+      );
+    } catch (err) {
+      console.error(
+        `Failed to get debug config: ${fqbn}, ${programmer}, ${sketchPath}`,
+        err
+      );
+      throw err;
+    }
   }
 
   async getBoardPackage(options: {

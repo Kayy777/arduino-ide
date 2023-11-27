@@ -730,7 +730,6 @@ proto.cc.arduino.cli.commands.v1.BoardDetailsResponse.toObject = function(includ
     proto.cc.arduino.cli.commands.v1.ConfigOption.toObject, includeInstance),
     programmersList: jspb.Message.toObjectList(msg.getProgrammersList(),
     cc_arduino_cli_commands_v1_common_pb.Programmer.toObject, includeInstance),
-    debuggingSupported: jspb.Message.getBooleanFieldWithDefault(msg, 14, false),
     identificationPropertiesList: jspb.Message.toObjectList(msg.getIdentificationPropertiesList(),
     proto.cc.arduino.cli.commands.v1.BoardIdentificationProperties.toObject, includeInstance),
     buildPropertiesList: (f = jspb.Message.getRepeatedField(msg, 16)) == null ? undefined : f,
@@ -823,10 +822,6 @@ proto.cc.arduino.cli.commands.v1.BoardDetailsResponse.deserializeBinaryFromReade
       var value = new cc_arduino_cli_commands_v1_common_pb.Programmer;
       reader.readMessage(value,cc_arduino_cli_commands_v1_common_pb.Programmer.deserializeBinaryFromReader);
       msg.addProgrammers(value);
-      break;
-    case 14:
-      var value = /** @type {boolean} */ (reader.readBool());
-      msg.setDebuggingSupported(value);
       break;
     case 15:
       var value = new proto.cc.arduino.cli.commands.v1.BoardIdentificationProperties;
@@ -957,13 +952,6 @@ proto.cc.arduino.cli.commands.v1.BoardDetailsResponse.serializeBinaryToWriter = 
       13,
       f,
       cc_arduino_cli_commands_v1_common_pb.Programmer.serializeBinaryToWriter
-    );
-  }
-  f = message.getDebuggingSupported();
-  if (f) {
-    writer.writeBool(
-      14,
-      f
     );
   }
   f = message.getIdentificationPropertiesList();
@@ -1302,24 +1290,6 @@ proto.cc.arduino.cli.commands.v1.BoardDetailsResponse.prototype.addProgrammers =
  */
 proto.cc.arduino.cli.commands.v1.BoardDetailsResponse.prototype.clearProgrammersList = function() {
   return this.setProgrammersList([]);
-};
-
-
-/**
- * optional bool debugging_supported = 14;
- * @return {boolean}
- */
-proto.cc.arduino.cli.commands.v1.BoardDetailsResponse.prototype.getDebuggingSupported = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 14, false));
-};
-
-
-/**
- * @param {boolean} value
- * @return {!proto.cc.arduino.cli.commands.v1.BoardDetailsResponse} returns this
- */
-proto.cc.arduino.cli.commands.v1.BoardDetailsResponse.prototype.setDebuggingSupported = function(value) {
-  return jspb.Message.setProto3BooleanField(this, 14, value);
 };
 
 

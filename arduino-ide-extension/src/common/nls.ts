@@ -29,3 +29,13 @@ export const serialMonitorWidgetLabel = nls.localize(
   'arduino/common/serialMonitor',
   'Serial Monitor'
 );
+
+export const noBoardSelected = nls.localize(
+  'arduino/common/noBoardSelected',
+  'No board selected'
+);
+
+export const noSketchOpened = nls.localize(
+  'arduino/common/noSketchOpened',
+  'No sketch opened'
+);
