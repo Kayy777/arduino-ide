@@ -213,10 +213,10 @@
       "debuggingNotSupported": "Debugging is not supported by '{0}'",
       "getDebugInfo": "Getting debug info...",
       "noPlatformInstalledFor": "Platform is not installed for '{0}'",
-      "noProgrammerSelected": "No programmer selected",
+      "noProgrammerSelectedFor": "No programmer selected for '{0}'",
       "optimizeForDebugging": "Optimize for Debugging",
       "programmerNotSelected": "The debugger requires a programmer. Do you want to select a programmer? You can select it manually from the Tools > Programmer menu.",
-      "sketchIsNotCompiled": "Sketch '{0}' must be verified before starting a debug session."
+      "sketchIsNotCompiled": "Sketch '{0}' must be verified before starting a debug session"
     },
     "developer": {
       "clearBoardList": "Clear the Board List History",
