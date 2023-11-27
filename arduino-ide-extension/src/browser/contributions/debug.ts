@@ -1,6 +1,7 @@
 import { Emitter, Event } from '@theia/core/lib/common/event';
 import { MenuModelRegistry } from '@theia/core/lib/common/menu/menu-model-registry';
 import { nls } from '@theia/core/lib/common/nls';
+import { MaybePromise } from '@theia/core/lib/common/types';
 import { inject, injectable } from '@theia/core/shared/inversify';
 import {
   SelectManually,
@@ -364,14 +365,14 @@ export namespace Debug {
 export async function isDebugEnabled(
   sketch: CurrentSketch | undefined,
   board: BoardIdentifier | undefined,
-  getDetails: (fqbn: string) => Promise<BoardDetails | undefined>,
-  getData: (fqbn: string) => Promise<BoardsDataStore.Data>,
-  appendConfigToFqbn: (fqbn: string) => Promise<string | undefined>,
-  checkDebugEnabled: (params: CheckDebugEnabledParams) => Promise<void>,
+  getDetails: (fqbn: string) => MaybePromise<BoardDetails | undefined>,
+  getData: (fqbn: string) => MaybePromise<BoardsDataStore.Data>,
+  appendConfigToFqbn: (fqbn: string) => MaybePromise<string | undefined>,
+  checkDebugEnabled: (params: CheckDebugEnabledParams) => MaybePromise<void>,
   isSketchNotVerifiedError: (
     err: unknown,
     sketchRef: SketchRef
-  ) => Promise<boolean>
+  ) => MaybePromise<boolean>
 ): Promise<void> {
   if (!CurrentSketch.isValid(sketch)) {
     throw new Error(noSketchOpened);
