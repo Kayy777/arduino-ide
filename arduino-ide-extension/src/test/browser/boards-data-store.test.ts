@@ -75,8 +75,6 @@ describe('boards-data-store', function () {
     const storedData: BoardsDataStore.Data = {
       configOptions: [],
       programmers: [edbg],
-      selectedProgrammer: edbg,
-      defaultProgrammerId: edbg.id,
     };
     await setStorageData(fqbn, storedData);
     const data = await boardsDataStore.getData(fqbn);
@@ -157,6 +155,51 @@ describe('boards-data-store', function () {
   it('should not provide any startup tasks when no data is available for the selected board', async () => {
     const tasks = boardsDataStore.tasks();
     expect(tasks).to.be.empty;
+  });
+
+  it('should select the default programmer', async () => {
+    const storedData = await getStoredData(fqbn);
+    expect(storedData).to.be.undefined;
+
+    toDisposeAfterEach.push(
+      mockBoardDetails([
+        {
+          fqbn,
+          ...baseDetails,
+          defaultProgrammerId: edbg.id,
+        },
+      ])
+    );
+
+    const data = await boardsDataStore.getData(fqbn);
+    expect(data).to.be.deep.equal({
+      configOptions: [configOption1],
+      programmers: [edbg, jlink],
+      defaultProgrammerId: edbg.id,
+      selectedProgrammer: edbg,
+    });
+  });
+
+  it('should not select the default programmer when no match', async () => {
+    const storedData = await getStoredData(fqbn);
+    expect(storedData).to.be.undefined;
+
+    toDisposeAfterEach.push(
+      mockBoardDetails([
+        {
+          fqbn,
+          ...baseDetails,
+          defaultProgrammerId: 'missing',
+        },
+      ])
+    );
+
+    const data = await boardsDataStore.getData(fqbn);
+    expect(data).to.be.deep.equal({
+      configOptions: [configOption1],
+      programmers: [edbg, jlink],
+      defaultProgrammerId: 'missing',
+    });
   });
 
   it('should select a programmer', async () => {
@@ -455,7 +498,6 @@ describe('boards-data-store', function () {
     PID: '1',
     buildProperties: [],
     configOptions: [configOption1],
-    defaultProgrammerId: edbg.id,
     programmers: [edbg, jlink],
     requiredTools: [],
   };

@@ -344,7 +344,7 @@ export interface BoardDetails {
   readonly VID: string;
   readonly PID: string;
   readonly buildProperties: string[];
-  readonly defaultProgrammerId: string | undefined;
+  readonly defaultProgrammerId?: string;
 }
 
 export interface Tool {

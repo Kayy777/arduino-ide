@@ -169,9 +169,7 @@ export class BoardsServiceImpl
       VID,
       PID,
       buildProperties,
-      defaultProgrammerId: defaultProgrammerId
-        ? defaultProgrammerId
-        : undefined,
+      ...(defaultProgrammerId ? { defaultProgrammerId } : {}),
     };
   }
 

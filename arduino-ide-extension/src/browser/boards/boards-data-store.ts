@@ -282,13 +282,12 @@ export namespace BoardsDataStore {
     readonly configOptions: ConfigOption[];
     readonly programmers: Programmer[];
     readonly selectedProgrammer?: Programmer;
-    readonly defaultProgrammerId: string | undefined;
+    readonly defaultProgrammerId?: string;
   }
   export namespace Data {
     export const EMPTY: Data = deepFreeze({
       configOptions: [],
       programmers: [],
-      defaultProgrammerId: undefined,
     });
 
     export function is(arg: unknown): arg is Data {
@@ -298,7 +297,9 @@ export namespace BoardsDataStore {
         Array.isArray((<Data>arg).configOptions) &&
         Array.isArray((<Data>arg).programmers) &&
         ((<Data>arg).selectedProgrammer === undefined ||
-          isProgrammer((<Data>arg).selectedProgrammer))
+          isProgrammer((<Data>arg).selectedProgrammer)) &&
+        ((<Data>arg).defaultProgrammerId === undefined ||
+          typeof (<Data>arg).defaultProgrammerId === 'string')
       );
     }
   }
@@ -308,7 +309,8 @@ export function isEmptyData(data: BoardsDataStore.Data): boolean {
   return (
     Boolean(!data.configOptions.length) &&
     Boolean(!data.programmers.length) &&
-    Boolean(!data.selectedProgrammer)
+    Boolean(!data.selectedProgrammer) &&
+    Boolean(!data.defaultProgrammerId)
   );
 }
 
@@ -328,16 +330,18 @@ export function findDefaultProgrammer(
 function createDataStoreEntry(details: BoardDetails): BoardsDataStore.Data {
   const configOptions = details.configOptions.slice();
   const programmers = details.programmers.slice();
+  const { defaultProgrammerId } = details;
   const selectedProgrammer = findDefaultProgrammer(
     programmers,
-    details.defaultProgrammerId
+    defaultProgrammerId
   );
-  return {
+  const data = {
     configOptions,
     programmers,
-    defaultProgrammerId: details.defaultProgrammerId,
-    selectedProgrammer,
+    ...(selectedProgrammer ? { selectedProgrammer } : {}),
+    ...(defaultProgrammerId ? { defaultProgrammerId } : {}),
   };
+  return data;
 }
 
 export interface BoardsDataStoreChange {
