@@ -36,7 +36,10 @@ import type {
 } from 'vscode-arduino-api';
 import { URI as CodeURI } from 'vscode-uri';
 import { ArduinoPreferences } from '../../browser/arduino-preferences';
-import { BoardsDataStore } from '../../browser/boards/boards-data-store';
+import {
+  BoardsDataStore,
+  BoardsDataStoreChangeEvent,
+} from '../../browser/boards/boards-data-store';
 import { BoardsServiceProvider } from '../../browser/boards/boards-service-provider';
 import { ConfigServiceClient } from '../../browser/config/config-service-client';
 import { CommandRegistry } from '../../browser/contributions/contribution';
@@ -90,7 +93,7 @@ describe('update-arduino-state', function () {
   let onCurrentSketchDidChangeEmitter: Emitter<CurrentSketch>;
   let onDataDirDidChangeEmitter: Emitter<URI | undefined>;
   let onSketchDirDidChangeEmitter: Emitter<URI | undefined>;
-  let onDataStoreDidChangeEmitter: Emitter<string[]>;
+  let onDataStoreDidChangeEmitter: Emitter<BoardsDataStoreChangeEvent>;
 
   beforeEach(async () => {
     toDisposeAfterEach = new DisposableCollection();
@@ -157,10 +160,10 @@ describe('update-arduino-state', function () {
   it('should automatically update the boards config (board+port) on ready', async () => {
     const fqbn = 'a:b:c';
     const board = { fqbn, name: 'ABC' };
-    const boardDetails = {
+    const boardDetails: BoardDetails = {
       buildProperties: [],
       configOptions: [],
-      debuggingSupported: false,
+      defaultProgrammerId: undefined,
       fqbn,
       PID: '0',
       VID: '0',
@@ -290,7 +293,7 @@ describe('update-arduino-state', function () {
     const boardDetails = {
       buildProperties: [],
       configOptions: [],
-      debuggingSupported: false,
+      defaultProgrammerId: undefined,
       fqbn,
       PID: '0',
       VID: '0',
@@ -372,7 +375,7 @@ describe('update-arduino-state', function () {
     const boardDetails = {
       buildProperties: [],
       configOptions: [],
-      debuggingSupported: false,
+      defaultProgrammerId: undefined,
       fqbn,
       PID: '0',
       VID: '0',
@@ -525,7 +528,25 @@ describe('update-arduino-state', function () {
   });
 
   it('should not update the board details when data store did change but the selected board does not match', async () => {
-    onDataStoreDidChangeEmitter.fire(['a:b:c']);
+    onDataStoreDidChangeEmitter.fire({
+      changes: [
+        {
+          fqbn: 'a:b:c',
+          // the data does not matter
+          data: {
+            configOptions: [
+              {
+                label: 'C1',
+                option: 'c1',
+                values: [{ label: 'C1V1', selected: true, value: 'c1v1' }],
+              },
+            ],
+            programmers: [],
+            defaultProgrammerId: undefined,
+          },
+        },
+      ],
+    });
     await wait(50);
 
     expect(stateUpdateParams).to.be.empty;
@@ -537,7 +558,7 @@ describe('update-arduino-state', function () {
     const boardDetails = {
       buildProperties: [],
       configOptions: [],
-      debuggingSupported: false,
+      defaultProgrammerId: undefined,
       fqbn,
       PID: '0',
       VID: '0',
@@ -552,7 +573,19 @@ describe('update-arduino-state', function () {
       selectedPort: undefined,
     };
 
-    onDataStoreDidChangeEmitter.fire(['a:b:c']);
+    onDataStoreDidChangeEmitter.fire({
+      changes: [
+        {
+          fqbn: 'a:b:c',
+          // the data does not matter
+          data: {
+            configOptions: [],
+            programmers: [{ id: 'p1', name: 'P1', platform: 'The platform' }],
+            defaultProgrammerId: 'p1',
+          },
+        },
+      ],
+    });
     await wait(50);
 
     const params = stateUpdateParams.filter(
@@ -607,7 +640,7 @@ describe('update-arduino-state', function () {
             const data = dataStoreMocks[fqbn] ?? BoardsDataStore.Data.EMPTY;
             return data;
           },
-          get onChanged() {
+          get onDidChange() {
             return onDataStoreDidChangeEmitter.event;
           },
         });

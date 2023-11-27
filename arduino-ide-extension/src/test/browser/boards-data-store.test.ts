@@ -16,7 +16,6 @@ import {
 } from '@theia/core/lib/common/disposable';
 import { MessageService } from '@theia/core/lib/common/message-service';
 import { wait } from '@theia/core/lib/common/promise-util';
-import { MockLogger } from '@theia/core/lib/common/test/mock-logger';
 import { Container, ContainerModule } from '@theia/core/shared/inversify';
 import { expect } from 'chai';
 import { BoardsDataStore } from '../../browser/boards/boards-data-store';
@@ -30,7 +29,7 @@ import {
   Programmer,
 } from '../../common/protocol/boards-service';
 import { NotificationServiceServer } from '../../common/protocol/notification-service';
-import { ConsoleLogger, bindCommon } from '../common/common-test-bindings';
+import { bindBrowser } from './browser-test-bindings';
 
 disableJSDOM();
 
@@ -77,6 +76,7 @@ describe('boards-data-store', function () {
       configOptions: [],
       programmers: [edbg],
       selectedProgrammer: edbg,
+      defaultProgrammerId: edbg.id,
     };
     await setStorageData(fqbn, storedData);
     const data = await boardsDataStore.getData(fqbn);
@@ -390,7 +390,7 @@ describe('boards-data-store', function () {
     const container = new Container({ defaultScope: 'Singleton' });
     container.load(
       new ContainerModule((bind, unbind, isBound, rebind) => {
-        bindCommon(bind);
+        bindBrowser(bind, unbind, isBound, rebind);
         bind(MessageService).toConstantValue(<MessageService>{});
         bind(BoardsService).toConstantValue(<BoardsService>{
           getDetectedPorts() {
@@ -415,11 +415,6 @@ describe('boards-data-store', function () {
         bind(WindowService).toConstantValue(<WindowService>{});
         bind(StorageService).toService(LocalStorageService);
         bind(BoardsServiceProvider).toSelf().inSingletonScope();
-        // IDE2's test console logger does not support `Loggable` arg.
-        // Rebind logger to suppress `[Function (anonymous)]` messages in tests when the storage service is initialized without `window.localStorage`.
-        // https://github.com/eclipse-theia/theia/blob/04c8cf07843ea67402131132e033cdd54900c010/packages/core/src/browser/storage-service.ts#L60
-        bind(MockLogger).toSelf().inSingletonScope();
-        rebind(ConsoleLogger).toService(MockLogger);
       })
     );
     return container;
@@ -460,7 +455,7 @@ describe('boards-data-store', function () {
     PID: '1',
     buildProperties: [],
     configOptions: [configOption1],
-    debuggingSupported: false,
+    defaultProgrammerId: edbg.id,
     programmers: [edbg, jlink],
     requiredTools: [],
   };
