@@ -215,7 +215,6 @@
       "noPlatformInstalledFor": "Platform is not installed for '{0}'",
       "noProgrammerSelectedFor": "No programmer selected for '{0}'",
       "optimizeForDebugging": "Optimize for Debugging",
-      "programmerNotSelected": "The debugger requires a programmer. Do you want to select a programmer? You can select it manually from the Tools > Programmer menu.",
       "sketchIsNotCompiled": "Sketch '{0}' must be verified before starting a debug session"
     },
     "developer": {
@@ -418,7 +417,6 @@
         "deprecationMessage": "Deprecated. Use 'window.zoomLevel' instead."
       }
     },
-    "quickSelectProgrammer": "Type the programmer. Press Enter to confirm or Escape to cancel.",
     "renameCloudSketch": {
       "renameSketchTitle": "New name of the Cloud Sketch"
     },
