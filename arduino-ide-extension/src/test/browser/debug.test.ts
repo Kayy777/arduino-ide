@@ -9,6 +9,7 @@ import { DisposableCollection } from '@theia/core/lib/common/disposable';
 import { CommandEvent, CommandRegistry } from '@theia/core/lib/common/command';
 import { Emitter } from '@theia/core/lib/common/event';
 import { deepClone } from '@theia/core/lib/common/objects';
+import { wait } from '@theia/core/lib/common/promise-util';
 import { Mutable } from '@theia/core/lib/common/types';
 import {
   Container,
@@ -35,18 +36,17 @@ import { noBoardSelected, noSketchOpened } from '../../common/nls';
 import {
   BoardsConfigChangeEvent,
   BoardsPackage,
+  CompileSummary,
   ExecutableService,
   type BoardDetails,
   type Programmer,
   type Sketch,
-  CompileSummary,
 } from '../../common/protocol';
 import {
   BoardsConfig,
   emptyBoardsConfig,
 } from '../../common/protocol/boards-service';
 import { bindSketchesContribution } from './browser-test-bindings';
-import { wait } from '@theia/core/lib/common/promise-util';
 import { aPackage } from './fixtures/boards';
 
 disableJSDOM();

@@ -361,7 +361,6 @@ import { TerminalFrontendContribution as TheiaTerminalFrontendContribution } fro
 import { SelectionService } from '@theia/core/lib/common/selection-service';
 import { CommandService } from '@theia/core/lib/common/command';
 import { CorePreferences } from '@theia/core/lib/browser/core-preferences';
-import { SelectProgrammer } from './contributions/select-programmer';
 import { AutoSelectProgrammer } from './contributions/auto-select-programmer';
 import { HostedPluginSupport } from './hosted/hosted-plugin-support';
 
@@ -759,7 +758,6 @@ export default new ContainerModule((bind, unbind, isBound, rebind) => {
   Contribution.configure(bind, CreateCloudCopy);
   Contribution.configure(bind, UpdateArduinoState);
   Contribution.configure(bind, BoardsDataMenuUpdater);
-  Contribution.configure(bind, SelectProgrammer);
   Contribution.configure(bind, AutoSelectProgrammer);
 
   bindContributionProvider(bind, StartupTaskProvider);

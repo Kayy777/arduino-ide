@@ -3,11 +3,7 @@ import { MenuModelRegistry } from '@theia/core/lib/common/menu/menu-model-regist
 import { nls } from '@theia/core/lib/common/nls';
 import { MaybePromise } from '@theia/core/lib/common/types';
 import { inject, injectable } from '@theia/core/shared/inversify';
-import {
-  SelectManually,
-  noBoardSelected,
-  noSketchOpened,
-} from '../../common/nls';
+import { noBoardSelected, noSketchOpened } from '../../common/nls';
 import {
   BoardDetails,
   BoardIdentifier,
@@ -17,7 +13,6 @@ import {
   SketchRef,
   isBoardIdentifierChangeEvent,
   isCompileSummary,
-  isProgrammer,
 } from '../../common/protocol';
 import { BoardsDataStore } from '../boards/boards-data-store';
 import { BoardsServiceProvider } from '../boards/boards-service-provider';
@@ -225,43 +220,10 @@ export class Debug extends SketchContribution {
       const result = await this.debug(params);
       return Boolean(result);
     } catch (err) {
-      const yes = nls.localize('vscode/extensionsUtils/yes', 'Yes');
-      const sketchUri = await this.fileSystemExt.getUri(params.sketchPath);
-      const sketch = SketchRef.fromUri(sketchUri);
-      if (err instanceof Error && /missing programmer/gi.test(err.message)) {
-        const answer = await this.messageService.warn(
-          nls.localize(
-            'arduino/debug/programmerNotSelected',
-            'The debugger requires a programmer. Do you want to select a programmer? You can select it manually from the Tools > Programmer menu.'
-          ),
-          SelectManually,
-          yes
-        );
-        if (answer === yes) {
-          const result = await this.commandService.executeCommand(
-            'arduino-select-programmer'
-          );
-          if (isProgrammer(result)) {
-            return this.startDebug();
-          }
-        }
-      } else if (await this.isSketchNotVerifiedError(err, sketch)) {
-        const answer = await this.messageService.error(
-          nls.localize(
-            'arduino/debug/sketchIsNotCompiled',
-            "Sketch '{0}' must be verified before starting a debug session.",
-            sketch.name
-          ),
-          yes
-        );
-        if (answer === yes) {
-          this.commandService.executeCommand('arduino-verify-sketch');
-        }
-      } else {
-        this.messageService.error(
-          err instanceof Error ? err.message : String(err)
-        );
-      }
+      console.error(err);
+      this.messageService.error(
+        err instanceof Error ? err.message : String(err)
+      );
     }
     return false;
   }
