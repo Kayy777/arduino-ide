@@ -5,29 +5,14 @@ import { FrontendApplicationConfigProvider } from '@theia/core/lib/browser/front
 FrontendApplicationConfigProvider.set({});
 
 import { FrontendApplicationStateService } from '@theia/core/lib/browser/frontend-application-state';
-import { LabelProvider } from '@theia/core/lib/browser/label-provider';
-import { OpenerService } from '@theia/core/lib/browser/opener-service';
-import {
-  LocalStorageService,
-  StorageService,
-} from '@theia/core/lib/browser/storage-service';
-import { WindowService } from '@theia/core/lib/browser/window/window-service';
 import {
   Disposable,
   DisposableCollection,
 } from '@theia/core/lib/common/disposable';
-import { EnvVariablesServer } from '@theia/core/lib/common/env-variables';
 import { Emitter } from '@theia/core/lib/common/event';
-import { MessageService } from '@theia/core/lib/common/message-service';
 import { wait } from '@theia/core/lib/common/promise-util';
 import URI from '@theia/core/lib/common/uri';
-import {
-  Container,
-  ContainerModule,
-  injectable,
-} from '@theia/core/shared/inversify';
-import { EditorManager } from '@theia/editor/lib/browser/editor-manager';
-import { FileService } from '@theia/filesystem/lib/browser/file-service';
+import { Container, ContainerModule } from '@theia/core/shared/inversify';
 import { expect } from 'chai';
 import type {
   BoardDetails as ApiBoardDetails,
@@ -35,7 +20,6 @@ import type {
   Port as ApiPort,
 } from 'vscode-arduino-api';
 import { URI as CodeURI } from 'vscode-uri';
-import { ArduinoPreferences } from '../../browser/arduino-preferences';
 import {
   BoardsDataStore,
   BoardsDataStoreChangeEvent,
@@ -47,31 +31,18 @@ import {
   UpdateArduinoState,
   UpdateStateParams,
 } from '../../browser/contributions/update-arduino-state';
-import { DialogService } from '../../browser/dialog-service';
-import { SettingsService } from '../../browser/dialogs/settings/settings';
-import { HostedPluginSupport } from '../../browser/hosted/hosted-plugin-support';
 import { NotificationCenter } from '../../browser/notification-center';
 import {
   CurrentSketch,
   SketchesServiceClientImpl,
 } from '../../browser/sketches-service-client-impl';
-import { ApplicationConnectionStatusContribution } from '../../browser/theia/core/connection-status-service';
-import { OutputChannelManager } from '../../browser/theia/output/output-channel';
-import { WorkspaceService } from '../../browser/theia/workspace/workspace-service';
-import { MainMenuManager } from '../../common/main-menu-manager';
-import {
-  CompileSummary,
-  FileSystemExt,
-  SketchesService,
-} from '../../common/protocol';
+import { CompileSummary } from '../../common/protocol';
 import {
   BoardDetails,
   BoardsService,
   Port,
 } from '../../common/protocol/boards-service';
-import { NotificationServiceServer } from '../../common/protocol/notification-service';
-import { never } from '../utils';
-import { bindBrowser } from './browser-test-bindings';
+import { bindSketchesContribution } from './browser-test-bindings';
 
 disableJSDOM();
 
@@ -612,9 +583,9 @@ describe('update-arduino-state', function () {
     const container = new Container({ defaultScope: 'Singleton' });
     container.load(
       new ContainerModule((bind, unbind, isBound, rebind) => {
-        bindBrowser(bind, unbind, isBound, rebind);
-        bind(MessageService).toConstantValue(<MessageService>{});
-        bind(BoardsService).toConstantValue(<BoardsService>{
+        bindSketchesContribution(bind, unbind, isBound, rebind);
+        bind(UpdateArduinoState).toSelf().inSingletonScope();
+        rebind(BoardsService).toConstantValue(<BoardsService>{
           getDetectedPorts() {
             return {};
           },
@@ -622,17 +593,7 @@ describe('update-arduino-state', function () {
             return boardDetailsMocks[fqbn];
           },
         });
-        bind(NotificationCenter).toSelf().inSingletonScope();
-        bind(NotificationServiceServer).toConstantValue(<
-          NotificationServiceServer
-        >{
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          setClient(_) {
-            // nothing
-          },
-        });
-        bind(FrontendApplicationStateService).toSelf().inSingletonScope();
-        bind(BoardsDataStore).toConstantValue(<BoardsDataStore>{
+        rebind(BoardsDataStore).toConstantValue(<BoardsDataStore>{
           async getData(fqbn) {
             if (!fqbn) {
               return BoardsDataStore.Data.EMPTY;
@@ -644,16 +605,7 @@ describe('update-arduino-state', function () {
             return onDataStoreDidChangeEmitter.event;
           },
         });
-        bind(LocalStorageService).toSelf().inSingletonScope();
-        bind(WindowService).toConstantValue(<WindowService>{});
-        bind(StorageService).toService(LocalStorageService);
-        bind(BoardsServiceProvider).toSelf().inSingletonScope();
-        bind(NoopHostedPluginSupport).toSelf().inSingletonScope();
-        bind(HostedPluginSupport).toService(NoopHostedPluginSupport);
-        bind(UpdateArduinoState).toSelf().inSingletonScope();
-        bind(FileService).toConstantValue(<FileService>{});
-        bind(FileSystemExt).toConstantValue(<FileSystemExt>{});
-        bind(ConfigServiceClient).toConstantValue(<ConfigServiceClient>{
+        rebind(ConfigServiceClient).toConstantValue(<ConfigServiceClient>{
           tryGetSketchDirUri() {
             return sketchDirUriMock;
           },
@@ -667,9 +619,7 @@ describe('update-arduino-state', function () {
             return onDataDirDidChangeEmitter.event;
           },
         });
-        bind(SketchesService).toConstantValue(<SketchesService>{});
-        bind(OpenerService).toConstantValue(<OpenerService>{});
-        bind(SketchesServiceClientImpl).toConstantValue(<
+        rebind(SketchesServiceClientImpl).toConstantValue(<
           SketchesServiceClientImpl
         >{
           tryGetCurrentSketch() {
@@ -677,27 +627,8 @@ describe('update-arduino-state', function () {
           },
           onCurrentSketchDidChange: onCurrentSketchDidChangeEmitter.event,
         });
-        bind(EditorManager).toConstantValue(<EditorManager>{});
-        bind(OutputChannelManager).toConstantValue(<OutputChannelManager>{});
-        bind(EnvVariablesServer).toConstantValue(<EnvVariablesServer>{});
-        bind(ApplicationConnectionStatusContribution).toConstantValue(
-          <ApplicationConnectionStatusContribution>{}
-        );
-        bind(WorkspaceService).toConstantValue(<WorkspaceService>{});
-        bind(LabelProvider).toConstantValue(<LabelProvider>{});
-        bind(SettingsService).toConstantValue(<SettingsService>{});
-        bind(ArduinoPreferences).toConstantValue(<ArduinoPreferences>{});
-        bind(DialogService).toConstantValue(<DialogService>{});
-        bind(MainMenuManager).toConstantValue(<MainMenuManager>{});
       })
     );
     return container;
   }
 });
-
-@injectable()
-class NoopHostedPluginSupport implements HostedPluginSupport {
-  readonly didStart = Promise.resolve();
-  readonly onDidCloseConnection = never();
-  readonly onDidLoad = never();
-}

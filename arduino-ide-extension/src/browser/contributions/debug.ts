@@ -85,62 +85,61 @@ export class Debug extends SketchContribution {
   private readonly boardsDataStore: BoardsDataStore;
 
   /**
-   * If `undefined`, debugging is enabled. Otherwise, the reason why it's disabled.
+   * If `undefined`, debugging is enabled. Otherwise, the human-readable reason why it's disabled.
    */
-  private _disabledMessages?: string = noBoardSelected; // Initial pessimism.
-  private disabledMessageDidChangeEmitter = new Emitter<string | undefined>();
-  private onDisabledMessageDidChange =
-    this.disabledMessageDidChangeEmitter.event;
+  private _message?: string = noBoardSelected; // Initial pessimism.
+  private didChangeMessageEmitter = new Emitter<string | undefined>();
+  private onDidChangeMessage = this.didChangeMessageEmitter.event;
 
-  private get disabledMessage(): string | undefined {
-    return this._disabledMessages;
+  private get message(): string | undefined {
+    return this._message;
   }
-  private set disabledMessage(message: string | undefined) {
-    this._disabledMessages = message;
-    this.disabledMessageDidChangeEmitter.fire(this._disabledMessages);
+  private set message(message: string | undefined) {
+    this._message = message;
+    this.didChangeMessageEmitter.fire(this._message);
   }
 
   private readonly debugToolbarItem = {
     id: Debug.Commands.START_DEBUGGING.id,
     command: Debug.Commands.START_DEBUGGING.id,
     tooltip: `${
-      this.disabledMessage
+      this.message
         ? nls.localize(
             'arduino/debug/debugWithMessage',
             'Debug - {0}',
-            this.disabledMessage
+            this.message
           )
         : Debug.Commands.START_DEBUGGING.label
     }`,
     priority: 3,
-    onDidChange: this.onDisabledMessageDidChange as Event<void>,
+    onDidChange: this.onDidChangeMessage as Event<void>,
   };
 
   override onStart(): void {
-    this.onDisabledMessageDidChange(
+    this.onDidChangeMessage(
       () =>
         (this.debugToolbarItem.tooltip = `${
-          this.disabledMessage
+          this.message
             ? nls.localize(
                 'arduino/debug/debugWithMessage',
                 'Debug - {0}',
-                this.disabledMessage
+                this.message
               )
             : Debug.Commands.START_DEBUGGING.label
         }`)
     );
     this.boardsServiceProvider.onBoardsConfigDidChange((event) => {
       if (isBoardIdentifierChangeEvent(event)) {
-        this.refreshState();
+        this.updateMessage();
       }
     });
-    this.notificationCenter.onPlatformDidInstall(() => this.refreshState());
-    this.notificationCenter.onPlatformDidUninstall(() => this.refreshState());
+    this.notificationCenter.onPlatformDidInstall(() => this.updateMessage());
+    this.notificationCenter.onPlatformDidUninstall(() => this.updateMessage());
     this.boardsDataStore.onDidChange((event) => {
       const selectedFqbn =
         this.boardsServiceProvider.boardsConfig.selectedBoard?.fqbn;
       if (event.changes.find((change) => change.fqbn === selectedFqbn)) {
-        this.refreshState();
+        this.updateMessage();
       }
     });
     this.commandService.onDidExecuteCommand((event) => {
@@ -149,13 +148,13 @@ export class Debug extends SketchContribution {
         commandId === 'arduino.languageserver.notifyBuildDidComplete' &&
         isCompileSummary(args[0])
       ) {
-        this.refreshState();
+        this.updateMessage();
       }
     });
   }
 
   override onReady(): void {
-    this.boardsServiceProvider.ready.then(() => this.refreshState());
+    this.boardsServiceProvider.ready.then(() => this.updateMessage());
   }
 
   override registerCommands(registry: CommandRegistry): void {
@@ -163,7 +162,7 @@ export class Debug extends SketchContribution {
       execute: () => this.startDebug(),
       isVisible: (widget) =>
         ArduinoToolbar.is(widget) && widget.side === 'left',
-      isEnabled: () => !this.disabledMessage,
+      isEnabled: () => !this.message,
     });
     registry.registerCommand(Debug.Commands.TOGGLE_OPTIMIZE_FOR_DEBUG, {
       execute: () => this.toggleCompileForDebug(),
@@ -186,26 +185,31 @@ export class Debug extends SketchContribution {
     });
   }
 
-  private async refreshState(): Promise<void> {
+  private async updateMessage(): Promise<void> {
     try {
-      const sketch = this.sketchServiceClient.tryGetCurrentSketch();
-      const board = this.boardsServiceProvider.boardsConfig.selectedBoard;
-      await isDebugEnabled(
-        sketch,
-        board,
-        (fqbn) => this.boardService.getBoardDetails({ fqbn }),
-        (fqbn) => this.boardsDataStore.getData(fqbn),
-        (fqbn) => this.boardsDataStore.appendConfigToFqbn(fqbn),
-        (params) => this.boardService.checkDebugEnabled(params),
-        (reason, sketch) => this.isSketchNotVerifiedError(reason, sketch)
-      );
-      this.disabledMessage = undefined;
+      await this.isDebugEnabled();
+      this.message = undefined;
     } catch (err) {
-      this.disabledMessage = String(err);
+      let message = String(err);
       if (err instanceof Error) {
-        this.disabledMessage = err.message;
+        message = err.message;
       }
+      this.message = message;
     }
+  }
+
+  private async isDebugEnabled(): Promise<void> {
+    const sketch = this.sketchServiceClient.tryGetCurrentSketch();
+    const board = this.boardsServiceProvider.boardsConfig.selectedBoard;
+    await isDebugEnabled(
+      sketch,
+      board,
+      (fqbn) => this.boardService.getBoardDetails({ fqbn }),
+      (fqbn) => this.boardsDataStore.getData(fqbn),
+      (fqbn) => this.boardsDataStore.appendConfigToFqbn(fqbn),
+      (params) => this.boardService.checkDebugEnabled(params),
+      (reason, sketch) => this.isSketchNotVerifiedError(reason, sketch)
+    );
   }
 
   private async startDebug(
@@ -276,7 +280,7 @@ export class Debug extends SketchContribution {
     return value === 'true';
   }
 
-  async toggleCompileForDebug(): Promise<void> {
+  private toggleCompileForDebug(): void {
     const oldState = this.compileForDebug;
     const newState = !oldState;
     window.localStorage.setItem(COMPILE_FOR_DEBUG_KEY, String(newState));
